@@ -38,7 +38,7 @@ export const getUserDocument = async (userId: string) => {
     return null;
   } catch (error) {
     console.error("Error fetching user document:", error);
-    return null;
+    throw error;
   }
 };
 

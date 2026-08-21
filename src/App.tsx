@@ -20,49 +20,44 @@ export default function App() {
   const [authResolved, setAuthResolved] = useState(false);
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<'loading' | 'synced' | 'saving' | 'error'>('loading');
 
-  // Load profile settings
-  const [profile, setProfile] = useState<UserProfile>(() => {
-    const saved = localStorage.getItem('flyneo_profile');
-    return saved ? (JSON.parse(saved) as UserProfile) : {
-      name: 'Chaitanya Bodage',
-      email: 'chaitanyabodage5515@gmail.com',
-      rollNumber: 'PRN-2025010932',
-      branch: 'B.Tech CSE - Artificial Intelligence & Machine Learning',
-      semester: 'Semester III (Div I, Batch I3)',
-      targetPercentage: 75,
-    };
+  const createDefaultSchedule = (): DailySchedule[] => [0, 1, 2, 3, 4, 5, 6].map((dayNum) => {
+    const defaultDay = DEFAULT_SCHEDULE.find((s) => s.dayOfWeek === dayNum);
+    return defaultDay || { dayOfWeek: dayNum, slots: [] };
   });
 
-  // Load from local storage, fallback to defaults (will be updated with backend state on load)
-  const [courses, setCourses] = useState<Course[]>(() => {
-    const saved = localStorage.getItem('flyneo_courses');
-    return saved ? (JSON.parse(saved) as Course[]) : DEFAULT_COURSES;
+  const createDefaultProfile = (currentUser: User | null): UserProfile => ({
+    name: currentUser?.displayName || '',
+    email: currentUser?.email || '',
+    rollNumber: '',
+    branch: '',
+    semester: '',
+    targetPercentage: 75,
   });
 
-  const [records, setRecords] = useState<AttendanceRecord[]>(() => {
-    const saved = localStorage.getItem('flyneo_records');
-    return saved ? (JSON.parse(saved) as AttendanceRecord[]) : DEFAULT_RECORDS;
-  });
-
-  const [schedule, setSchedule] = useState<DailySchedule[]>(() => {
-    const saved = localStorage.getItem('flyneo_schedule');
-    if (saved) {
-      return JSON.parse(saved) as DailySchedule[];
-    }
-    // Initialize full week (days 0-6) so every day of the week is editable
-    const fullWeek = [0, 1, 2, 3, 4, 5, 6].map((dayNum) => {
-      const defaultDay = DEFAULT_SCHEDULE.find((s) => s.dayOfWeek === dayNum);
-      return defaultDay || { dayOfWeek: dayNum, slots: [] };
-    });
-    return fullWeek;
-  });
+  const [profile, setProfile] = useState<UserProfile>(() => createDefaultProfile(null));
+  const [courses, setCourses] = useState<Course[]>(() => DEFAULT_COURSES);
+  const [records, setRecords] = useState<AttendanceRecord[]>(() => DEFAULT_RECORDS);
+  const [schedule, setSchedule] = useState<DailySchedule[]>(() => createDefaultSchedule());
 
   // Handle Firebase Auth
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      setLoadedUserId(null);
+      setIsLoaded(false);
+      setSyncStatus('loading');
+      setProfile(createDefaultProfile(currentUser));
+      setCourses([]);
+      setRecords([]);
+      setSchedule(
+  [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
+    dayOfWeek,
+    slots: [],
+  }))
+);
       setAuthResolved(true);
     });
     return () => unsubscribe();
@@ -81,16 +76,14 @@ export default function App() {
         const data = await getUserDocument(user.uid);
         if (data) {
           if (data.profile) setProfile(data.profile);
-          if (data.courses && Array.isArray(data.courses) && data.courses.length > 0) setCourses(data.courses);
+          if (Array.isArray(data.courses)) setCourses(data.courses);
           if (data.records && Array.isArray(data.records)) setRecords(data.records);
-          if (data.schedule && Array.isArray(data.schedule) && data.schedule.length > 0) setSchedule(data.schedule);
-        } else {
-          // If a new user logs in, set their profile email to match their Google account automatically
-          setProfile((prev: UserProfile) => ({ ...prev, email: user.email || prev.email }));
+          if (Array.isArray(data.schedule)) setSchedule(data.schedule);
         }
+        setLoadedUserId(user.uid);
         setSyncStatus('synced');
       } catch (err) {
-        console.warn('Firebase unreachable. Running offline fallback.', err);
+        console.warn('Firebase unreachable. Changes will not be synced until the data load succeeds.', err);
         setSyncStatus('error');
       } finally {
         setIsLoaded(true);
@@ -101,18 +94,22 @@ export default function App() {
 
   // 2. Automated Real-Time Syncing to Firebase
   useEffect(() => {
-    if (!isLoaded || !user) return;
+    if (!isLoaded || !user || loadedUserId !== user.uid) return;
+
+    const cacheKey = (dataType: string) => `flyneo_${dataType}_${user.uid}`;
 
     // Cache in localStorage immediately for maximum robustness
-    localStorage.setItem('flyneo_profile', JSON.stringify(profile));
-    localStorage.setItem('flyneo_courses', JSON.stringify(courses));
-    localStorage.setItem('flyneo_records', JSON.stringify(records));
-    localStorage.setItem('flyneo_schedule', JSON.stringify(schedule));
+    localStorage.setItem(cacheKey('profile'), JSON.stringify(profile));
+    localStorage.setItem(cacheKey('courses'), JSON.stringify(courses));
+    localStorage.setItem(cacheKey('records'), JSON.stringify(records));
+    localStorage.setItem(cacheKey('schedule'), JSON.stringify(schedule));
 
     const syncToBackend = async () => {
       try {
+        const currentUser = auth.currentUser;
+        if (!currentUser || currentUser.uid !== user.uid) return;
         setSyncStatus('saving');
-        await syncUserDocument(user.uid, profile, courses, records, schedule);
+        await syncUserDocument(currentUser.uid, profile, courses, records, schedule);
         setSyncStatus('synced');
       } catch (err) {
         console.error('Auto-sync failed:', err);
@@ -236,9 +233,10 @@ export default function App() {
         );
       }
       
-      localStorage.removeItem('flyneo_courses');
-      localStorage.removeItem('flyneo_records');
-      localStorage.removeItem('flyneo_schedule');
+      localStorage.removeItem(`flyneo_courses_${user?.uid}`);
+      localStorage.removeItem(`flyneo_records_${user?.uid}`);
+      localStorage.removeItem(`flyneo_schedule_${user?.uid}`);
+      localStorage.removeItem(`flyneo_profile_${user?.uid}`);
       setCourses(DEFAULT_COURSES);
       setRecords(DEFAULT_RECORDS);
       setSchedule(fullWeek);
