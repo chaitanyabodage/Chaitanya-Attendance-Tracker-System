@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global Helpers
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { 
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+
+    // Validation Blueprint for UserDocument
+    function isValidUserDocument(data, expectedUserId) {
+      return data.keys().hasAll(['userId', 'updatedAt']) &&
+             data.userId == expectedUserId &&
+             data.updatedAt == request.time &&
+             (!data.keys().hasAny(['profile']) || data.profile is map) &&
+             (!data.keys().hasAny(['courses']) || data.courses is list) &&
+             (!data.keys().hasAny(['records']) || data.records is list) &&
+             (!data.keys().hasAny(['schedule']) || data.schedule is list);
+    }
+
+    match /users/{userId} {
+      // Read access isolated to the owner
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if false;
+
+      allow create: if isSignedIn() && 
+                    isValidId(userId) && 
+                    request.auth.uid == userId &&
+                    isValidUserDocument(incoming(), userId);
+
+      allow update: if isSignedIn() && 
+                    isValidId(userId) && 
+                    request.auth.uid == userId &&
+                    existing().userId == userId && // Immutable field
+                    isValidUserDocument(incoming(), userId) &&
+                    // Action: Sync Update
+                    incoming().diff(existing()).affectedKeys().hasOnly(['profile', 'courses', 'records', 'schedule', 'updatedAt']);
+
+      allow delete: if false; // Users shouldn't delete their core doc normally
+    }
+  }
+}

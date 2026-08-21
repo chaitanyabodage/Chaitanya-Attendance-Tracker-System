@@ -1,0 +1,6 @@
+{
+  "name": "Chaitanya Attendance Tracker",
+  "description": "A premium credit-weighted daily attendance tracker designed for BTech CSE AIML students at JSPM University.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

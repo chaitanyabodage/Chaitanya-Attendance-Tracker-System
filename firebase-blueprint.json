@@ -1,0 +1,41 @@
+{
+  "entities": {
+    "UserDocument": {
+      "title": "UserDocument",
+      "description": "User's attendance tracker data including profile and schedules",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The user's Firebase Auth UID"
+        },
+        "profile": {
+          "type": "object",
+          "description": "The user's personal details and academic info"
+        },
+        "courses": {
+          "type": "array",
+          "description": "List of courses tracked by the user"
+        },
+        "records": {
+          "type": "array",
+          "description": "Attendance logs"
+        },
+        "schedule": {
+          "type": "array",
+          "description": "Weekly timetable configuration"
+        },
+        "updatedAt": {
+          "type": "string"
+        }
+      },
+      "required": ["userId", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "UserDocument",
+      "description": "Stores each user's unique attendance tracker and profile data"
+    }
+  }
+}
