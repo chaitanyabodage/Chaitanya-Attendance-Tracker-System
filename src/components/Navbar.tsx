@@ -25,9 +25,7 @@ export default function Navbar({ currentTab, setCurrentTab, syncStatus }: Navbar
           <span className="text-xl font-bold tracking-wide text-slate-100">
   Smart<span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-400 to-blue-400"> ATTENDANCE TRACKER</span>
 </span>
-          <span className="text-[10px] font-mono text-slate-400 px-1.5 py-0.5 rounded border border-white/10 bg-white/10 ml-2">
-            CSE-AIML
-          </span>
+          
 
           {/* Cloud Sync Status Indicator */}
           {syncStatus && (
