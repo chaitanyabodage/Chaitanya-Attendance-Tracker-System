@@ -46,11 +46,8 @@ export default function Dashboard({ courses, records, setCurrentTab }: Dashboard
           </div>
 
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white font-sans max-w-2xl leading-[1.15]">
-            The Future of{' '}
-            <span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-400 to-blue-400 drop-shadow-[0_0_15px_rgba(129,140,248,0.2)]">
-              Flyneo Attendance
-            </span>
-          </h1>
+  Smart Attendance Tracker
+</h1>
 
           <p className="mt-4 text-sm md:text-base text-slate-400 max-w-xl leading-relaxed">
             A premium, high-contrast digital tracking assistant crafted specifically for your daily lectures and credit-weighted academic requirements.

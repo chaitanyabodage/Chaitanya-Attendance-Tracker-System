@@ -22,9 +22,9 @@ export default function Navbar({ currentTab, setCurrentTab, syncStatus }: Navbar
         {/* Brand logo with subtle neon glow */}
         <div className="flex items-center space-x-2">
           <div className="h-3 w-3 rounded-full bg-indigo-400 shadow-[0_0_12px_rgba(129,140,248,0.5)] animate-pulse" />
-          <span className="text-xl font-bold tracking-wider text-slate-100">
-            CHAITANYA<span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-400 to-blue-400"> TRACKER</span>
-          </span>
+          <span className="text-xl font-bold tracking-wide text-slate-100">
+  Smart<span className="text-transparent bg-clip-text bg-linear-to-r from-indigo-400 to-blue-400"> ATTENDANCE TRACKER</span>
+</span>
           <span className="text-[10px] font-mono text-slate-400 px-1.5 py-0.5 rounded border border-white/10 bg-white/10 ml-2">
             CSE-AIML
           </span>
